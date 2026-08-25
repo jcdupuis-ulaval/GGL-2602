@@ -28,10 +28,11 @@ def _():
     import marimo as mo
     import numpy as np
     import ulgeophys as geophys
-    import plotly.express as px
+    import plotly.graph_objects as go
     import pandas as pd
+    from plotly.subplots import make_subplots
 
-    return geophys, mo, np, px
+    return geophys, go, make_subplots, mo, np, pd
 
 
 @app.cell
@@ -67,10 +68,10 @@ def _(R, delta_rho, e, geophys, l, mo, model_selection, np, offset, z):
         gz = geophys.grav_prisme(l.value,e.value,z.value,delta_rho.value,x,offset.value)
         sim_data = {"X(m)":x,"gz(mGal)":gz}
     else:
-        _output = mo.vstack([R,mo.md(f"{R.value} m"), 
-                             delta_rho,mo.md(f" {delta_rho.value}" + r"$\frac{kg}{m^3}$" ),
-                             offset,mo.md(f"{offset.value} m"),
-                             z,mo.md(f"{z.value} m")],align="center")
+        _output = mo.vstack([R,mo.md(f"Rayon de la sphère {R.value} m"), 
+                             delta_rho,mo.md(f"Différence de masse volumique {delta_rho.value}" + r"$\frac{kg}{m^3}$" ),
+                             offset,mo.md(f"Distance du centre de la sphère le long de la ligne {offset.value} m"),
+                             z,mo.md(f"Profondeur du centre de la sphère {z.value} m")],align="start")
         gz = geophys.grav_sphere(R.value,z.value,delta_rho.value,x,offset.value)
         sim_data = {"X(m)":x,"gz(mGal)":gz}
 
@@ -79,22 +80,90 @@ def _(R, delta_rho, e, geophys, l, mo, model_selection, np, offset, z):
 
 
 @app.cell
-def _(mo, px, sim_data):
-    _fig = px.line(sim_data,x="X(m)",y="gz(mGal)",labels=['Modèle'])
-    '''_fig.add_trace(
-        go.Scatter(
-            x=data['pos'],
-            y=field_data_raw-730.6,
-        mode='markers',
-        name = 'Données brutes')
-    )'''
+def _(go, mo, sim_data):
+    _fig = go.Figure()
+    _fig.add_trace(go.Scatter(x=sim_data['X(m)'], y=sim_data['gz(mGal)'], mode='lines', name='Modélisation'))
+
     plot = mo.ui.plotly(_fig)
-    return (plot,)
+    _fig.update_layout(
+        xaxis_title="Distance X (m)",
+        yaxis_title="Anomalie gravimétrique gz (mGal)"
+    )
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    Les données de terrain
+    """)
+    return
 
 
 @app.cell
-def _(mo, plot):
-    mo.hstack([plot])
+def _(mo):
+    temperature = mo.ui.number(start=-40,stop=100,label="Température (°F)",value=0)
+    temperature
+
+    return (temperature,)
+
+
+@app.cell
+def _(geophys, pd, temperature):
+
+    data_header=['pos','elevation', 'temps','lecture-1','lecture-2','lecture-3','lecture-4'] 
+    data = pd.read_csv('./data/grav-data.csv',sep=',',names=data_header,header=None,skiprows=9) # read the raw data 
+    data.columns = data_header # Assign the column names to the data frame
+    average_reading = data.loc[:,'lecture-1':'lecture-4'].mean(axis=1) # Average at each station
+    std_reading = data.loc[:,'lecture-1':'lecture-4'].std(axis=1) # Standard deviation at each station
+    field_data_raw = average_reading*geophys.grav_worden_cal(t=temperature.value) # convert the readings to mGal using the Worden calibration
+    return data, field_data_raw
+
+
+@app.cell
+def _(data, field_data_raw, go, make_subplots, sim_data):
+    fig = make_subplots(rows=1, cols=2)
+
+    fig.add_trace(
+        go.Scatter(
+            x=sim_data['X(m)'], 
+            y=sim_data['gz(mGal)'],mode='lines', name='Modèle'), row=1, col=1)
+
+    fig.add_trace(
+        go.Scatter(
+            x=data['pos'],
+            y=field_data_raw,mode='markers',name='Données brutes',marker=dict(symbol='circle',size=5,color='red')),row=1, col=2)
+
+    fig.update_layout(
+        title_text="Modélisation et données de terrain",
+        xaxis_title="Distance X (m)",
+        yaxis_title="Anomalie gravimétrique gz (mGal)",
+        xaxis2_title="Distance X (m)",
+        yaxis2_title="Données brutes du gravimètre Worden",
+    )
+
+    fig.show()
+
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    Conversion des données en mGal
+    """)
+    return
+
+
+@app.cell
+def _(field_data_raw):
+    field_data_raw
+
+    return
+
+
+@app.cell
+def _():
     return
 
 
