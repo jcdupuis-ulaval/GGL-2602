@@ -1,13 +1,20 @@
+# /// script
+# requires-python = ">=3.13"
+# dependencies = [
+#     "marimo>=0.23.3",
+# ]
+# ///
+
 import marimo
 
-__generated_with = "0.17.6"
+__generated_with = "0.23.9"
 app = marimo.App(width="medium", auto_download=["html"])
 
 
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
-    Message pour les étudiants
+    Message pour les personnes étudiantes
     """)
     return
 
@@ -15,6 +22,7 @@ def _(mo):
 @app.cell
 def _():
     import marimo as mo
+
     return (mo,)
 
 
