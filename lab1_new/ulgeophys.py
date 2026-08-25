@@ -26,8 +26,8 @@ def grav_worden_cal(t):
     # La température est en Farenheit 
     m=(0.40514-0.40546)/(0-120)
     b = 0.40514
-    print ('m = %4.6f' %m)
     tcomp = m*t+b
+    print ('Le facteur de calibration est de %.6f pour une température de %4.6f F' %(tcomp,t))
     return tcomp
     
 def GMSYS_export (f,position,Elev,Grav):
